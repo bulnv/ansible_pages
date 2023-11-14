@@ -1,0 +1,14 @@
+
+- name: Test Cloudflare Pages Module
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Create a Cloudflare Page
+      cloudflare_pages:  # Replace with your module name
+        api_token: "A0jroltaU6bj4IXR4xDiw9gjnFhukXX6YhLdj0v3"
+        action: "create"
+        account_id: "edd328e7670b924bd71bfd328a4b4bc4"
+        project_details: 
+          name: 'ansible-test'
+          production_branch: 'main'
+      register: result
