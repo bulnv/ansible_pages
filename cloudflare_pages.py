@@ -1,43 +1,35 @@
 from ansible.module_utils.basic import AnsibleModule
 import requests
+from urllib.parse import urljoin
 
-API_BASE_URL = "https://api.cloudflare.com/client/v4/accounts"
+API_BASE_URL = "https://api.cloudflare.com/client/v4/accounts/"
+
+def api_request(method, url, headers, data=None):
+    """ Helper function to make API requests. """
+    response = requests.request(method, url, headers=headers, json=data)
+    return response.status_code, response.json()
+
+def get_headers(api_token):
+    """ Prepare the headers for the API request. """
+    return {
+        "Authorization": f"Bearer {api_token}",
+        "Content-Type": "application/json"
+    }
 
 def get_pages_projects(api_token, account_id):
-    headers = {
-        "Authorization": f"Bearer {api_token}",
-        "Content-Type": "application/json"
-    }
-    response = requests.get("{}/{}/pages/projects".format(API_BASE_URL, account_id), headers=headers)
-    if response.status_code == 200 or response.status_code == 201:
-        return True, response.json()
-    else:
-        return False, response.json()
+    """ Get the list of pages projects. """
+    url = urljoin(API_BASE_URL, f"{account_id}/pages/projects")
+    return api_request("GET", url, get_headers(api_token))
     
 def create_pages_project(api_token, account_id, project_details):
-    headers = {
-        "Authorization": f"Bearer {api_token}",
-        "Content-Type": "application/json"
-    }
-    response = requests.post("{}/{}/pages/projects".format(API_BASE_URL, account_id), headers=headers, 
-                             json=project_details)
+    """ Create a pages project. """
+    url = urljoin(API_BASE_URL, f"{account_id}/pages/projects")
+    return api_request("POST", url, get_headers(api_token), project_details)
     
-    if response.status_code == 200 or response.status_code == 201:
-        return True, {}
-    else:
-        return False, response.json()
-    
-def delete_pages_project(api_token, account_id, project_details):
-    headers = {
-        "Authorization": f"Bearer {api_token}",
-        "Content-Type": "application/json"
-    }
-    response = requests.delete("{}/{}/pages/projects/{}".format(API_BASE_URL, account_id, project_details['name']), headers=headers)
-    
-    if response.status_code == 200 or response.status_code == 201:
-        return True, {}
-    else:
-        return False, response.json()
+def delete_pages_project(api_token, account_id, project_name):
+    """ Delete a pages project. """
+    url = urljoin(API_BASE_URL, f"{account_id}/pages/projects/{project_name}")
+    return api_request("DELETE", url, get_headers(api_token))
 
 def find_and_compare_page_project(search_result, project_details):
     exist = False
@@ -45,67 +37,60 @@ def find_and_compare_page_project(search_result, project_details):
     for item in search_result['result']:
         if item['name'] == project_details['name']:
             exist = True
-    return exist, equal
+    return exist
 
 def run_module():
-    module_args = dict(
-        api_token=dict(type='str', required=True),
-        state=dict(type='str', required=True, choices=['present', 'absent']),
-        account_id=dict(type='str', required=True),
-        project_details=dict(type='dict', required=False)
-    )
+    """ Main module execution. """
+    module_args = {
+        "api_token": {"type": 'str', "required": True},
+        "state": {"type": 'str', "required": True, "choices": ['present', 'absent']},
+        "account_id": {"type": 'str', "required": True},
+        "project_details": {"type": 'dict', "required": False}
+    }
 
-    result = dict(
-        changed=False,
-        message=''
-    )
+    result = {
+        "changed": False,
+        "message": ''
+    }
 
-    module = AnsibleModule(
-        argument_spec=module_args,
-        supports_check_mode=False
-    )
+    module = AnsibleModule(argument_spec=module_args, supports_check_mode=False)
     
     api_token = module.params['api_token']
     state = module.params['state']
-    project_details = module.params['project_details']
     account_id = module.params['account_id']
+    project_details = module.params['project_details']
 
-    succ, response = get_pages_projects(api_token, account_id)
-    if not succ:
-        pass
-    else:
-        current_state = response
-    exist, equal = find_and_compare_page_project(current_state, project_details)
+    status_code, response = get_pages_projects(api_token, account_id)
+    if not status_code in (200, 201):
+        module.fail_json(msg='Error fetching project details', error=response)
+
+    project_exists = find_and_compare_page_project(response, project_details) if project_details else False
 
     if state == 'present':
-        if exist:
-            result['changed'] = False
-            result['message'] = 'Project already there'
-            result['response'] = 'Project already there'
+        if project_exists:
+            result['message'] = 'Project already exists.'
         else:
-            success, response = create_pages_project(api_token, account_id, project_details)
-            if success == True:
+            status_code, response = create_pages_project(api_token, account_id, project_details)
+            if status_code in (200, 201):
                 result['changed'] = True
                 result['message'] = 'Project created successfully.'
-                result['response'] = response
             else:
                 module.fail_json(msg='Error creating project', error=response)
     elif state == 'absent':
-        if exist:
-            success, response = delete_pages_project(api_token, account_id, project_details)
-            if success == True:
+        if project_exists:
+            status_code, response = delete_pages_project(api_token, account_id, project_details['name'])
+            if status_code in (200, 201):
                 result['changed'] = True
                 result['message'] = 'Project deleted successfully.'
-                result['response'] = response
             else:
                 module.fail_json(msg='Error deleting project', error=response)
         else:
-            result['changed'] = False
-            result['message'] = 'Project already deleted'
-            result['response'] = 'Project already deleted'
+            result['message'] = 'Project does not exist or already deleted.'
+
     module.exit_json(**result)
 
 def main():
+    """ Main entry point. """
     run_module()
 
 if __name__ == '__main__':
