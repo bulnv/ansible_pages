@@ -5,10 +5,17 @@
   tasks:
     - name: Create a Cloudflare Page
       cloudflare_pages:  # Replace with your module name
-        api_token: ""
+        api_token: '{{ lookup("env","CLOUDFLARE_API_TOKEN") }}'
         state: "absent"
-        account_id: "edd328e7670b924bd71bfd328a4b4bc4"
+        account_id: '{{ lookup("env","CLOUDFLARE_PROJECT_ID") }}'
         name: 'ansible-test'
         project_details: 
           production_branch: 'main'
-      register: result
+
+    - name: Create cloudflare pages domain
+      cloudflare_pages_domain:
+        project_name: 'ansible-test'
+        api_token: '{{ lookup("env","CLOUDFLARE_API_TOKEN") }}'
+        state: "absent"
+        account_id: '{{ lookup("env","CLOUDFLARE_PROJECT_ID") }}'
+        domain_name: 'ansible-test.xmpp.st'
