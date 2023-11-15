@@ -8,7 +8,7 @@
         api_token: ""
         state: "absent"
         account_id: "edd328e7670b924bd71bfd328a4b4bc4"
+        name: 'ansible-test'
         project_details: 
-          name: 'ansible-test'
           production_branch: 'main'
       register: result

@@ -21,21 +21,27 @@ def get_pages_projects(api_token, account_id):
     url = urljoin(API_BASE_URL, f"{account_id}/pages/projects")
     return api_request("GET", url, get_headers(api_token))
     
-def create_pages_project(api_token, account_id, project_details):
+def create_pages_project(api_token, account_id, project_name, project_details):
     """ Create a pages project. """
     url = urljoin(API_BASE_URL, f"{account_id}/pages/projects")
+    project_details['name'] = project_name
     return api_request("POST", url, get_headers(api_token), project_details)
     
 def delete_pages_project(api_token, account_id, project_name):
     """ Delete a pages project. """
     url = urljoin(API_BASE_URL, f"{account_id}/pages/projects/{project_name}")
     return api_request("DELETE", url, get_headers(api_token))
+    
+def update_pages_project(api_token, account_id, project_name, project_details):
+    """ Update a pages project. """
+    url = urljoin(API_BASE_URL, f"{account_id}/pages/projects/{project_name}")
+    return api_request("PATCH", url, get_headers(api_token),project_details)
 
-def find_and_compare_page_project(search_result, project_details):
+def find_and_compare_page_project(search_result, project_name):
     exist = False
     equal = False
     for item in search_result['result']:
-        if item['name'] == project_details['name']:
+        if item['name'] == project_name:
             exist = True
     return exist
 
@@ -45,6 +51,7 @@ def run_module():
         "api_token": {"type": 'str', "required": True},
         "state": {"type": 'str', "required": True, "choices": ['present', 'absent']},
         "account_id": {"type": 'str', "required": True},
+        "name": {"type": 'str', "required": True},
         "project_details": {"type": 'dict', "required": False}
     }
 
@@ -58,19 +65,25 @@ def run_module():
     api_token = module.params['api_token']
     state = module.params['state']
     account_id = module.params['account_id']
+    project_name = module.params['name']
     project_details = module.params['project_details']
 
     status_code, response = get_pages_projects(api_token, account_id)
     if not status_code in (200, 201):
         module.fail_json(msg='Error fetching project details', error=response)
 
-    project_exists = find_and_compare_page_project(response, project_details) if project_details else False
+    project_exists = find_and_compare_page_project(response, project_name)
 
     if state == 'present':
         if project_exists:
-            result['message'] = 'Project already exists.'
+            status_code, response = update_pages_project(api_token, account_id, project_name, project_details)
+            if status_code in (200, 201):
+                result['changed'] = True
+                result['message'] = 'Project updated successfully.'
+            else:
+                module.fail_json(msg='Error updating project', error=response)
         else:
-            status_code, response = create_pages_project(api_token, account_id, project_details)
+            status_code, response = create_pages_project(api_token, account_id, project_name, project_details)
             if status_code in (200, 201):
                 result['changed'] = True
                 result['message'] = 'Project created successfully.'
@@ -78,7 +91,7 @@ def run_module():
                 module.fail_json(msg='Error creating project', error=response)
     elif state == 'absent':
         if project_exists:
-            status_code, response = delete_pages_project(api_token, account_id, project_details['name'])
+            status_code, response = delete_pages_project(api_token, account_id, project_name)
             if status_code in (200, 201):
                 result['changed'] = True
                 result['message'] = 'Project deleted successfully.'
