@@ -12,12 +12,8 @@ on:
   push:
     branches:
       - main
-      - stable-*
+      - feature/*
   pull_request:
-  # Run EOL CI once per day (at 08:00 UTC)
-  schedule:
-    - cron: '0 8 * * *'
-
 concurrency:
   # Make sure there is at most one active run per PR, but do not cancel any non-PR runs
   group: ${{ github.workflow }}-${{ (github.head_ref && github.event.number) || github.run_id }}
