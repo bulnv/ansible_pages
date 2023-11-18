@@ -1,0 +1,59 @@
+---
+# Copyright (c) Ansible Project
+# GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# For the comprehensive list of the inputs supported by the ansible-community/ansible-test-gh-action GitHub Action, see
+# https://github.com/marketplace/actions/ansible-test
+
+name: EOL CI
+on:
+  # Run EOL CI against all pushes (direct commits, also merged PRs), Pull Requests
+  push:
+    branches:
+      - main
+      - feature/*
+  pull_request:
+concurrency:
+  # Make sure there is at most one active run per PR, but do not cancel any non-PR runs
+  group: ${{ github.workflow }}-${{ (github.head_ref && github.event.number) || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  sanity:
+    name: EOL Sanity (Ⓐ${{ matrix.ansible }})
+    strategy:
+      matrix:
+        ansible:
+          - '2.13'
+    # Ansible-test on various stable branches does not yet work well with cgroups v2.
+    # Since ubuntu-latest now uses Ubuntu 22.04, we need to fall back to the ubuntu-20.04
+    # image for these stable branches. The list of branches where this is necessary will
+    # shrink over time, check out https://github.com/ansible-collections/news-for-maintainers/issues/28
+    # for the latest list.
+    runs-on: ubuntu-latest
+    steps:
+    - name: Perform integration testing with ansible-test
+      uses: ansible-community/ansible-test-gh-action@release/v1
+      with:
+        ansible-core-version: stable-2.14
+        pre-test-cmd: echo This runs before the ansible-test invocation
+        target-python-version: 3.11
+        controller-python-version: auto
+        testing-type: integration
+        test-deps: ansible.netcommon
+    - name: Perform sanity testing with ansible-test
+      uses: ansible-community/ansible-test-gh-action@release/v1
+      with:
+        ansible-core-version: stable-2.14
+        testing-type: sanity
+    - name: Perform unit testing with ansible-test
+      uses: ansible-community/ansible-test-gh-action@release/v1
+      with:
+        ansible-core-version: stable-2.14
+        pre-test-cmd: echo This runs before the ansible-test invocation
+        target-python-version: 3.11
+        testing-type: units
+        test-deps: >-
+          ansible.netcommon
+          ansible.utils
