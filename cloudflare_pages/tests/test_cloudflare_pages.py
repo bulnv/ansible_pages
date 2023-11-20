@@ -50,7 +50,8 @@ def test_create_pages_project():
 
     with requests_mock.Mocker() as m:
         m.post(expected_url, json=expected_response, status_code=200)
-        status_code, response = create_pages_project(api_token, account_id, project_name, project_details)
+        status_code, response = create_pages_project(
+            api_token, account_id, project_name, project_details)
 
         assert status_code == 200
         assert response == expected_response
