@@ -46,7 +46,6 @@ def update_pages_project(api_token, account_id, project_name, project_details):
 
 def find_and_compare_page_project(search_result, project_name):
     exist = False
-    equal = False
     if type(search_result) is dict:
         for item in search_result['result']:
             if item['name'] == project_name:

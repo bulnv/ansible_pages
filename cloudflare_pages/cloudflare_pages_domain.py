@@ -28,7 +28,6 @@ def get_pages_project_domains(api_token, account_id, project_name):
 
 def find_and_compare_page_project_domain(search_result, domain_name):
     exist = False
-    equal = False
     for item in search_result['result']:
         if item['name'] == domain_name:
             exist = True

@@ -1,4 +1,3 @@
-import pytest
 import requests_mock
 from ..cloudflare_pages import api_request, get_headers, find_and_compare_page_project, create_pages_project
 
@@ -25,8 +24,8 @@ def test_get_headers():
 def test_find_and_compare_page_project():
     project_name = 'testname'
     search_result = {'result': [{'name': project_name}]}
-    assert find_and_compare_page_project(search_result, project_name) == True
-    assert find_and_compare_page_project([], project_name) == False
+    assert find_and_compare_page_project(search_result, project_name) is True
+    assert find_and_compare_page_project([], project_name) is False
 
 
 def test_create_pages_project():
@@ -36,10 +35,6 @@ def test_create_pages_project():
     project_details = {"detail_key": "detail_value"}
 
     expected_url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/pages/projects"
-    expected_headers = {
-        "Authorization": f"Bearer {api_token}",
-        "Content-Type": "application/json"
-    }
     expected_response = {
         "success": True,
         "result": {
