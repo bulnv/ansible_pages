@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 API_BASE_URL = "https://api.cloudflare.com/client/v4/accounts/"
 
 
-def api_request(method, url, headers, params=None, data=None):
+def api_request(method, url, headers, data=None, params=None):
     """ Helper function to make API requests. """
     response = requests.request(method, url, headers=headers, json=data, params=params)
     return response.status_code, response.json()
