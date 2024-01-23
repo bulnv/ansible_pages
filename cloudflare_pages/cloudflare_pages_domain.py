@@ -54,6 +54,19 @@ def update_pages_project_domain(api_token, account_id, project_name, domain_name
         API_BASE_URL, f"{account_id}/pages/projects/{project_name}/domains/{domain_name}")
     return api_request("PATCH", url, get_headers(api_token))
 
+def find_and_compare_page_project(search_result, project_name):
+    exist = False
+    if type(search_result) is dict:
+        for item in search_result['result']:
+            if item['name'] == project_name:
+                exist = True
+    return exist
+
+def get_pages_projects(api_token, account_id):
+    """ Get the list of pages projects. """
+    url = urljoin(API_BASE_URL, f"{account_id}/pages/projects")
+    return api_request("GET", url, get_headers(api_token))
+
 
 def run_module():
     """ Main module execution. """
@@ -79,42 +92,52 @@ def run_module():
     project_name = module.params['project_name']
     domain_name = module.params['domain_name']
 
-    status_code, response = get_pages_project_domains(
-        api_token, account_id, project_name)
+    status_code, response = get_pages_projects(api_token, account_id)
     if status_code not in (200, 201):
-        module.fail_json(msg='Error fetching project domains', error=response)
+        module.fail_json(msg='Error fetching project details', error=response)
+    project_exists = find_and_compare_page_project(response, project_name)
+    print(project_exists)
 
-    project_exists = find_and_compare_page_project_domain(
-        response, domain_name)
 
-    if state == 'present':
-        if project_exists:
-            status_code, response = update_pages_project_domain(
-                api_token, account_id, project_name, domain_name)
-            if status_code in (200, 201):
-                result['changed'] = True
-                result['message'] = 'Project updated successfully.'
+    if project_exists:
+        status_code, response = get_pages_project_domains(
+            api_token, account_id, project_name)
+        if status_code not in (200, 201):
+            module.fail_json(msg='Error fetching project domains', error=response)
+
+        project_domain_exists = find_and_compare_page_project_domain(
+            response, domain_name)
+        if state == 'present':
+            if project_domain_exists:
+                status_code, response = update_pages_project_domain(
+                    api_token, account_id, project_name, domain_name)
+                if status_code in (200, 201):
+                    result['changed'] = True
+                    result['message'] = 'Project updated successfully.'
+                else:
+                    module.fail_json(msg='Error updating project', error=response)
             else:
-                module.fail_json(msg='Error updating project', error=response)
-        else:
-            status_code, response = create_pages_project_domain(
-                api_token, account_id, project_name, domain_name)
-            if status_code in (200, 201):
-                result['changed'] = True
-                result['message'] = 'Project created successfully.'
+                status_code, response = create_pages_project_domain(
+                    api_token, account_id, project_name, domain_name)
+                if status_code in (200, 201):
+                    result['changed'] = True
+                    result['message'] = 'Project created successfully.'
+                else:
+                    module.fail_json(msg='Error creating project', error=response)
+        elif state == 'absent':
+            if project_domain_exists:
+                status_code, response = delete_pages_project_domin(
+                    api_token, account_id, project_name, domain_name)
+                if status_code in (200, 201):
+                    result['changed'] = True
+                    result['message'] = 'Project deleted successfully.'
+                else:
+                    module.fail_json(msg='Error deleting project', error=response)
             else:
-                module.fail_json(msg='Error creating project', error=response)
-    elif state == 'absent':
-        if project_exists:
-            status_code, response = delete_pages_project_domin(
-                api_token, account_id, project_name, domain_name)
-            if status_code in (200, 201):
-                result['changed'] = True
-                result['message'] = 'Project deleted successfully.'
-            else:
-                module.fail_json(msg='Error deleting project', error=response)
-        else:
-            result['message'] = 'Project does not exist or already deleted.'
+                result['message'] = 'Project does not exist or already deleted.'
+    else:
+        result['changed'] = False
+        result['message'] = 'Project already deleted.'
 
     module.exit_json(**result)
 

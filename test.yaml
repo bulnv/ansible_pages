@@ -16,6 +16,6 @@
       cloudflare_pages_domain:
         project_name: 'ansible-test'
         api_token: '{{ lookup("env","CLOUDFLARE_API_TOKEN") }}'
-        state: "absent"
+        state: "present"
         account_id: '{{ lookup("env","CLOUDFLARE_PROJECT_ID") }}'
         domain_name: 'ansible-test.xmpp.st'
