@@ -5,9 +5,9 @@ from urllib.parse import urljoin
 API_BASE_URL = "https://api.cloudflare.com/client/v4/accounts/"
 
 
-def api_request(method, url, headers, data=None):
+def api_request(method, url, headers, params=None, data=None):
     """ Helper function to make API requests. """
-    response = requests.request(method, url, headers=headers, json=data)
+    response = requests.request(method, url, headers=headers, json=data, params=params)
     return response.status_code, response.json()
 
 
@@ -19,10 +19,28 @@ def get_headers(api_token):
     }
 
 
-def get_pages_projects(api_token, account_id):
+def get_pages_projects(api_token, account_id, page=None):
     """ Get the list of pages projects. """
-    url = urljoin(API_BASE_URL, f"{account_id}/pages/projects")
-    return api_request("GET", url, get_headers(api_token))
+    data = []
+    page = 1
+    while True:
+        params = {}
+        params["page"] = page
+        url = urljoin(API_BASE_URL, f"{account_id}/pages/projects")
+        status_code, response = api_request("GET", url, headers=get_headers(api_token), params=params)
+        if status_code < 300:
+            data.extend(response.get("result", []))
+            result_info = response.get("result_info", {})
+            total_pages = result_info.get("total_pages", 0)
+
+            # If there are more pages, update the page number and continue the loop
+            if page < total_pages:
+                page += 1
+            else:
+                break
+        else:
+            return status_code, response.get("errors", {})
+    return status_code, data
 
 
 def create_pages_project(api_token, account_id, project_name, project_details):
@@ -46,10 +64,9 @@ def update_pages_project(api_token, account_id, project_name, project_details):
 
 def find_and_compare_page_project(search_result, project_name):
     exist = False
-    if type(search_result) is dict:
-        for item in search_result['result']:
-            if item['name'] == project_name:
-                exist = True
+    for item in search_result:
+        if item['name'] == project_name:
+            exist = True
     return exist
 
 
@@ -82,7 +99,6 @@ def run_module():
         module.fail_json(msg='Error fetching project details', error=response)
 
     project_exists = find_and_compare_page_project(response, project_name)
-
     if state == 'present':
         if project_exists:
             status_code, response = update_pages_project(
