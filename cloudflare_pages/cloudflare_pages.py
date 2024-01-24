@@ -69,6 +69,12 @@ def find_and_compare_page_project(search_result, project_name):
             exist = True
     return exist
 
+def find_project_subdomain(search_result, project_name):
+    subdomain = None
+    for item in search_result:
+        if item['name'] == project_name:
+            subdomain = item['subdomain']
+    return subdomain
 
 def run_module():
     """ Main module execution. """
@@ -82,7 +88,8 @@ def run_module():
 
     result = {
         "changed": False,
-        "message": ''
+        "message": '',
+        "subdomain": ''
     }
 
     module = AnsibleModule(argument_spec=module_args,
@@ -99,6 +106,8 @@ def run_module():
         module.fail_json(msg='Error fetching project details', error=response)
 
     project_exists = find_and_compare_page_project(response, project_name)
+    subdomain = find_project_subdomain(response, project_name)
+    result['subdomain'] = subdomain
     if state == 'present':
         if project_exists:
             status_code, response = update_pages_project(
@@ -106,6 +115,7 @@ def run_module():
             if status_code in (200, 201):
                 result['changed'] = True
                 result['message'] = 'Project updated successfully.'
+                
             else:
                 module.fail_json(msg='Error updating project', error=response)
         else:
