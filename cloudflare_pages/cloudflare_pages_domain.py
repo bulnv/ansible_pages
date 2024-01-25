@@ -29,7 +29,7 @@ def get_pages_project_domains(api_token, account_id, project_name):
 def find_and_compare_page_project_domain(search_result, domain_name):
     exist = False
     for item in search_result['result']:
-        if domain_name in item["domains"]:
+        if domain_name == item["name"]:
             exist = True
     return exist
 
@@ -96,7 +96,6 @@ def run_module():
     if status_code not in (200, 201):
         module.fail_json(msg='Error fetching project details', error=response)
     project_exists = find_and_compare_page_project(response, project_name)
-    print(project_exists)
 
 
     if project_exists:
