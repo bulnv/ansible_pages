@@ -35,9 +35,9 @@ def find_and_compare_page_project(search_result, project_name):
             exist = True
     return exist
 
-def api_request(method, url, headers, data=None):
+def api_request(method, url, headers, data=None, params=None):
     """ Helper function to make API requests. """
-    response = requests.request(method, url, headers=headers, json=data)
+    response = requests.request(method, url, headers=headers, json=data, params=params)
     return response.status_code, response.json()
 
 
@@ -47,6 +47,7 @@ def get_headers(api_token):
         "Authorization": f"Bearer {api_token}",
         "Content-Type": "application/json"
     }
+
 
 
 def get_pages_project_domains(api_token, account_id, project_name):
