@@ -1,11 +1,39 @@
 from ansible.module_utils.basic import AnsibleModule
 import requests
 from urllib.parse import urljoin
-from cloudflare_pages import get_pages_projects
-from cloudflare_pages import find_and_compare_page_project
 
 API_BASE_URL = "https://api.cloudflare.com/client/v4/accounts/"
 
+
+def get_pages_projects(api_token, account_id, page=None):
+    """ Get the list of pages projects. """
+    data = []
+    page = 1
+    while True:
+        params = {}
+        params["page"] = page
+        url = urljoin(API_BASE_URL, f"{account_id}/pages/projects")
+        status_code, response = api_request("GET", url, headers=get_headers(api_token), params=params)
+        if status_code < 300:
+            data.extend(response.get("result", []))
+            result_info = response.get("result_info", {})
+            total_pages = result_info.get("total_pages", 0)
+
+            # If there are more pages, update the page number and continue the loop
+            if page < total_pages:
+                page += 1
+            else:
+                break
+        else:
+            return status_code, response.get("errors", {})
+    return status_code, data
+
+def find_and_compare_page_project(search_result, project_name):
+    exist = False
+    for item in search_result:
+        if item['name'] == project_name:
+            exist = True
+    return exist
 
 def api_request(method, url, headers, data=None):
     """ Helper function to make API requests. """
