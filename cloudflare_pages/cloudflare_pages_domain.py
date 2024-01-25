@@ -1,6 +1,8 @@
 from ansible.module_utils.basic import AnsibleModule
 import requests
 from urllib.parse import urljoin
+from cloudflare_pages import get_pages_projects
+from cloudflare_pages import find_and_compare_page_project
 
 API_BASE_URL = "https://api.cloudflare.com/client/v4/accounts/"
 
@@ -54,19 +56,6 @@ def update_pages_project_domain(api_token, account_id, project_name, domain_name
         API_BASE_URL, f"{account_id}/pages/projects/{project_name}/domains/{domain_name}")
     return api_request("PATCH", url, get_headers(api_token))
 
-def find_and_compare_page_project(search_result, project_name):
-    exist = False
-    if type(search_result) is dict:
-        for item in search_result['result']:
-            if item['name'] == project_name:
-                exist = True
-    return exist
-
-def get_pages_projects(api_token, account_id):
-    """ Get the list of pages projects. """
-    url = urljoin(API_BASE_URL, f"{account_id}/pages/projects")
-    return api_request("GET", url, get_headers(api_token))
-
 
 def run_module():
     """ Main module execution. """
@@ -112,31 +101,31 @@ def run_module():
                     api_token, account_id, project_name, domain_name)
                 if status_code in (200, 201):
                     result['changed'] = True
-                    result['message'] = 'Project updated successfully.'
+                    result['message'] = 'Project domain updated successfully.'
                 else:
-                    module.fail_json(msg='Error updating project', error=response)
+                    module.fail_json(msg='Error updating project domain', error=response)
             else:
                 status_code, response = create_pages_project_domain(
                     api_token, account_id, project_name, domain_name)
                 if status_code in (200, 201):
                     result['changed'] = True
-                    result['message'] = 'Project created successfully.'
+                    result['message'] = 'Project domain created successfully.'
                 else:
-                    module.fail_json(msg='Error creating project', error=response)
+                    module.fail_json(msg='Error creating project domain', error=response)
         elif state == 'absent':
             if project_domain_exists:
                 status_code, response = delete_pages_project_domin(
                     api_token, account_id, project_name, domain_name)
                 if status_code in (200, 201):
                     result['changed'] = True
-                    result['message'] = 'Project deleted successfully.'
+                    result['message'] = 'Project domain deleted successfully.'
                 else:
-                    module.fail_json(msg='Error deleting project', error=response)
+                    module.fail_json(msg='Error deleting project domain', error=response)
             else:
-                result['message'] = 'Project does not exist or already deleted.'
+                result['message'] = 'Project domain does not exist or already deleted.'
     else:
         result['changed'] = False
-        result['message'] = 'Project already deleted.'
+        result['message'] = 'Project domain missing.'
 
     module.exit_json(**result)
 
